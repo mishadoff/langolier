@@ -1,28 +1,24 @@
 (ns langolier.train
-  (:require [clojure.string :as s]))
+  (:require [langolier.tokenizer :as t]))
 
-(def global-map (atom {}))
+(def global-map (atom {:default 1}))
 (def cat-map (atom {}))
 
-(defn tokenize [source]
-  "Split source by space separator"
-  (s/split source #" "))
-
 (defn train [source language]
-  (let [freq (frequencies (tokenize source))]
+  (let [freq (frequencies (t/tokenize source))]
     (swap! global-map #(merge-with + % freq)) ;; add to global map
     (swap! cat-map 
            #(assoc % language 
-                   (merge-with + freq (get @cat-map language {}))))))
+                   (merge-with + freq (get @cat-map language {}))))
+    :ok))
 
-;; TODO add laplasian smoothing
-;; TODO add logprob
-(defn prob [token language]
-  (/ (double (get (get cat-map language) token 0))
-     (get global-map token 1)))
+(defn log-prob [token language]
+  (Math/log
+   (/ (double (inc (get (get @cat-map language {}) token 0)))
+      (+ (get @global-map token 0) (reduce + (vals @global-map))))))
 
 (defn score [tokens language]
-  (reduce *' (map #(prob % language) tokens))) 
+  (reduce +' (map #(log-prob % language) tokens))) 
 
 (defn scores [tokens languages]
   (map #(vec [% (score tokens %)]) languages))
@@ -32,6 +28,6 @@
 
 (defn classify [source]
   (-> source
-      (tokenize)
-      (scores [:java :clojure])
+      (t/tokenize)
+      (scores (keys @cat-map))
       (best)))
