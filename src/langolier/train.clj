@@ -31,18 +31,16 @@
 
 ;; TODO READABLE CODE WTF!
 (defn- fill-ngrams [n-type lang tokens]
-  (let [cnt (count tokens) freq (frequencies tokens)]
+  (let [rm (-> tokens
+               (frequencies)
+               (assoc :size (count tokens)))]
     (do (swap! model ;; fill global model 
                #(assoc % n-type 
-                       (merge-with + 
-                                   (assoc freq :size cnt)
-                                   (get-in @model [n-type] {})
+                       (merge-with + rm (get-in @model [n-type] {})
                                    )))
-        (swap! model 
+        (swap! model ;; fill lang specific model
                #(assoc-in % [:lang lang n-type] 
-                          (merge-with +
-                                      (assoc freq :size cnt)
-                                      (get-in @model [:lang lang n-type] {})))))))
+                          (merge-with + rm (get-in @model [:lang lang n-type] {})))))))
         
 
 ;; TODO avoid repetition
@@ -50,7 +48,8 @@
   (let [tokens (t/tokenize source)]
     (do (fill-ngrams :n3 language (trigrams (wrap tokens)))
         (fill-ngrams :n2 language (bigrams (wrap tokens)))
-        (fill-ngrams :n1 language tokens))))
+        (fill-ngrams :n1 language tokens)
+        :ok)))
 
 (defn train-dir [dir]
   (let [langs (->> dir
@@ -63,15 +62,38 @@
         (doseq [f (remove #(.isDirectory %) 
                           (file-seq (io/file lang-dir)))]
           (train (slurp f) lang-key))))))
-  
-(defn- log-prob [token language]
-  (Math/log
-   (/ (double (inc (get (get @cat-map language {}) token 0)))
-      (+ (get @global-map token 0) (reduce + (vals @global-map))))))
 
-;; TODO probability of category
+;; TODO make abstractions like dictsize, tokencat instead of get-in..
+(defn unigram-probability [token language]
+  (let [a (get-in @model [:lang language :n1 token] 0)
+        b (get-in @model [:n1 token] 0)] ;; to aviod div/0
+    (/ (double (inc a))
+       (+ b (get-in @model [:n1 :size]))))) ;; dict size
+          
+
+(defn- probability [token language]
+  (let [trigram (get-in @model [:lang language :n3 token] 0)]
+    (cond (> trigram 0) 
+          (/ (double trigram) (get-in @model [:n3 token]))
+          :else ;; backoff strategy
+          (let [bigram (get-in @model [:lang language :n2 (butlast token)] 0)]
+            (cond (> bigram 0)
+                  (* (/ (double bigram) (get-in @model [:n2 (butlast token)]))
+                     (unigram-probability (last token) language))
+                  :else 
+                  (reduce *' (map #(unigram-probability % language) token)))))))
+
+(defn- lang-probability [lang]
+  (let [total (get-in @model [:n1 :size])]
+    (if (zero? total) 
+      (throw (IllegalArgumentException. "Model is empty"))
+      (/ (double (get-in @model [:lang lang :n1 :size] 0))
+         total))))
+
 (defn- score [tokens language]
-  (reduce +' (map #(log-prob % language) tokens))) 
+  (reduce +'
+          ;;(Math/log (lang-probability language))
+          (map #(Math/log (probability % language)) tokens)))
 
 (defn- scores [tokens languages]
   (map #(vec [% (score tokens %)]) languages))
@@ -81,10 +103,11 @@
 
 (defn classify [source]
   (-> source
-      (t/tokenize)
+      (t/tokenize) ;; at least 1
+      (wrap)
       (trigrams)
-      (scores (keys @cat-map))
+      (scores (languages))
       (best)))
 
 (defn languages []
-  (keys @cat-map))
+  (keys (get @model :lang)))
