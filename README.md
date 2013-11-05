@@ -12,7 +12,7 @@ Programming Language Detector.
 (train "(defn idenity [x] x)" :clojure)
 (train "public static void main" :java)
 
-(classify "(defn main- [] (print 1))"
+(classify "(defn main- [] (print 1))")
 ```
 
 ## License
