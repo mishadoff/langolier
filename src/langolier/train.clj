@@ -8,10 +8,10 @@
   (atom {:global #{}
          :lang {:clojure #{}
                 :java #{}}
-         :weights {5 1000
-                   4 100
-                   3 20
-                   2 5
+         :weights {5 500
+                   4 300
+                   3 50
+                   2 10
                    1 1}}))
 
 (def DIR "resources/")
@@ -85,6 +85,7 @@
 
 (defn classify [source]
   (-> source
+      (#(do (v/validate-model model) %))
       (t/tokenize) ;; at least 3
       (wrap)
       (#(do (v/validate-tokens-count %) %)) 
