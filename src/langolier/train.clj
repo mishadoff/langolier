@@ -88,7 +88,7 @@
       (#(do (v/validate-model model) %))
       (t/tokenize) ;; at least 3
       (wrap)
-      (#(do (v/validate-tokens-count %) %)) 
+      (v/validate-tokens-count)
       (#(ngrams 5 %))
       (scores (languages))
       (#(do (print %) %)) ;; debug

@@ -27,8 +27,7 @@
        ;; replace numbers to "<number>"
        (transform #(if (re-matches #"\d+" %) "<number>" %))
        ;; one-letter to "<ident>" 
-       (transform #(if (re-matches #"\w" %) "<ident>" %))
-       ))
+       (transform #(if (re-matches #"\w" %) "<ident>" %))))
 
 (defn tokenize [source]
   (->> source
