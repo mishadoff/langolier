@@ -63,7 +63,8 @@
             lang-dir (str dir lang)]
         (doseq [f (remove #(.isDirectory %) 
                           (file-seq (io/file lang-dir)))]
-          (train (slurp f) lang-key))))))
+          (train (slurp f) lang-key))))
+    :ok))
 
 (defn score-one-ngram [ngram language]
   (cond (empty? ngram) 0
@@ -84,8 +85,8 @@
   (keys (get @model :lang)))
 
 (defn classify [source]
+  (v/validate-model model)
   (-> source
-      (#(do (v/validate-model model) %))
       (t/tokenize) ;; at least 3
       (wrap)
       (v/validate-tokens-count)

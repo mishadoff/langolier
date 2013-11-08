@@ -12,6 +12,8 @@
     :colon  "\\:" :scolon "\\;" :undscr "\\_"
     :arrow1 "\\^" :arrow2 "\\<" :arrow3 "\\>"}))
 
+;; TODO move wrapper here
+
 (defn- build-regexp []
   (->> @tokens
        vals
