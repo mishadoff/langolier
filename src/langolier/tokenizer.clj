@@ -1,21 +1,18 @@
 (ns langolier.tokenizer)
 
 (def tokens
-  (atom 
-   {:symbol "\\w+" :sharp "\\#" :percnt "\\%" 
-    :period "\\." :comma  "\\," :dollar "\\$"
-    :tilda  "\\~" :apostr "\\`" :mathop "[\\+\\-\\*\\/\\=]"
-    :exclam "\\!" :questm "\\?" :andor  "[\\&\\|]" 
-    :email  "\\@" :quote1 "\\'" :quote2 "\""
-    :parenl "\\(" :parenr "\\)" :curlyl "\\[" 
-    :squarl "\\{" :squarr "\\}" :curlyr "\\]"
-    :colon  "\\:" :scolon "\\;" :undscr "\\_"
-    :arrow1 "\\^" :arrow2 "\\<" :arrow3 "\\>"}))
-
-;; TODO move wrapper here
+  {:symbol "\\w+" :sharp "\\#" :percnt "\\%" 
+   :period "\\."  :comma  "\\," :dollar "\\$"
+   :tilda  "\\~"  :apostr "\\`" :mathop "[\\+\\-\\*\\/\\=]"
+   :exclam "\\!"  :questm "\\?" :andor  "[\\&\\|]" 
+   :email  "\\@"  :quote1 "\\'" :quote2 "\""
+   :parenl "\\("  :parenr "\\)" :curlyl "\\{" 
+   :squarl "\\["  :squarr "\\]"  :curlyr "\\}"
+   :colon  "\\:"  :scolon "\\;" :undscr "\\_"
+   :arrow1 "\\^"  :arrow2 "\\<" :arrow3 "\\>"})
 
 (defn- build-regexp []
-  (->> @tokens
+  (->> tokens
        vals
        (interpose "|")
        (apply str)
@@ -24,12 +21,13 @@
 (defn- transform [f tokens]
   (map f tokens))
 
+;; TODO transform to functions
 (defn- apply-filters [tokens]
   (->> tokens
        ;; replace numbers to "<number>"
-       (transform #(if (re-matches #"\d+" %) "<number>" %))
+       (transform #(if (re-matches #"\d+" %) :number %))
        ;; one-letter to "<ident>" 
-       (transform #(if (re-matches #"\w" %) "<ident>" %))))
+       (transform #(if (re-matches #"\w" %) :identifier %))))
 
 (defn tokenize [source]
   (->> source
